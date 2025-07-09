@@ -7,9 +7,9 @@
 
 ## User Story
 
-**As a** developer integrating BoosterAuth into my SaaS application
-**I want** users to be able to create new accounts with email and password
-**So that** new users can gain access to my application securely
+**As a** developer building a SaaS application  
+**I want** to integrate secure password-based user registration in under 5 minutes  
+**So that** I can ship authentication to production quickly while maintaining enterprise-grade security and compliance readiness
 
 ## Acceptance Criteria
 
@@ -21,7 +21,6 @@
 - [ ] **Password Security**: Password hashed with bcrypt before storage
 - [ ] **Error Handling**: Clear, non-enumerable error messages
 - [ ] **Input Sanitization**: All inputs validated and sanitized. Emails are not case-sensitive by default, but this is configurable.
-- [ ] **Rate Limiting**: Protection against automated sign-up attempts
 
 ### Technical Requirements
 
@@ -34,7 +33,7 @@
 
 ### Security Requirements
 
-- [ ] **Password Hashing**: bcrypt with configurable rounds (default: 4)
+- [ ] **Password Hashing**: bcrypt with configurable rounds (default: 12, minimum: 10)
 - [ ] **Enumeration Protection**: Generic responses that don't reveal account existence
 - [ ] **Input Validation**: Prevent injection attacks and malformed data
 - [ ] **Timing Attack Protection**: Consistent response times
@@ -277,7 +276,7 @@ export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordS
 - [ ] **Invalid Email Format/Duplicate**: Validation error from EmailValidator
 - [ ] **Weak Password/Mismatch**: Password policy or confirmation error from PasswordValidator
 - [ ] **Database Error**: Generic system error (no details leaked)
-- [ ] **Rate Limit Exceeded**: Too many attempts message
+- [ ] **Concurrent Registration**: Handle duplicate email race conditions gracefully
 
 ## Definition of Done
 
@@ -313,10 +312,23 @@ export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordS
 
 ## Notes
 
-- This story focuses on core sign-up functionality
-- Email verification will be addressed in separate story
+### **Current Scope**
+- This story focuses on core sign-up functionality with tRPC integration
+- Email verification will be addressed in separate story  
 - Session creation after sign-up is handled by sign-in flow
 - Password reset functionality is separate epic requirement
+- **Rate limiting** is handled in separate user story (20250709_rate-limiting.md)
+
+### **Business Impact**
+- **Developer Productivity**: 5-minute integration saves 2-3 days of auth implementation
+- **Security Posture**: Enterprise-grade security reduces compliance risk
+- **Time-to-Market**: Faster auth implementation accelerates product launches
+
+### **Technical Decisions**
+- tRPC router is designed to be mountable to existing applications
+- Future support for REST and GraphQL will follow similar patterns
+- Business logic remains transport-agnostic for maximum flexibility
+- Rate limiting applied as middleware (see separate story)
 
 ---
 **Related Epic**: 20250709_traditional-web-authentication.md
