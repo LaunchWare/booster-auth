@@ -63,9 +63,25 @@ libs/
 │       │   └── PasswordIdentityRepository.ts
 │       ├── services/
 │       │   └── PasswordAuthService.ts
+│       ├── schemas/
+│       │   └── passwordAuthSchemas.ts
 │       └── __tests__/
 │           ├── PasswordIdentity.test.ts
 │           └── PasswordAuthService.test.ts
+├── password-policy/               # Password policy validation
+│   └── src/
+│       ├── schemas/
+│       │   └── passwordPolicySchema.ts
+│       ├── services/
+│       │   └── PasswordPolicyService.ts
+│       └── __tests__/
+│           └── PasswordPolicyService.test.ts
+├── trpc/                          # tRPC route implementations
+│   └── password-auth/             # tRPC routes for password auth
+│       └── src/
+│           ├── passwordAuthRouter.ts
+│           └── __tests__/
+│               └── passwordAuthRouter.test.ts
 └── prisma/                        # Prisma implementations
     └── password-auth/             # Prisma implementation for password auth
         └── src/
@@ -136,6 +152,107 @@ export interface PasswordSignUpResult {
   userId?: string;
   error?: string;
 }
+```
+
+### Password Policy Library
+
+```typescript
+// @booster-auth/password-policy
+import { z } from 'zod';
+
+export type PasswordSchema = z.ZodString;
+
+// Default password schema - can be overridden
+export const defaultPasswordSchema: PasswordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number');
+
+// Example alternative schemas
+export const strictPasswordSchema: PasswordSchema = z.string()
+  .min(12, 'Password must be at least 12 characters')
+  .max(128, 'Password must be no more than 128 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character');
+
+export const simplePasswordSchema: PasswordSchema = z.string()
+  .min(6, 'Password must be at least 6 characters');
+```
+
+### Shared Authentication Schemas
+
+```typescript
+// @booster-auth/password-auth/schemas
+import { z } from 'zod';
+import { defaultPasswordSchema, PasswordSchema } from '@booster-auth/password-policy';
+
+export const createPasswordAuthSchemas = (passwordSchema: PasswordSchema = defaultPasswordSchema) => {
+  const signUpInputSchema = z.object({
+    email: z.string().email('Invalid email format'),
+    password: passwordSchema,
+    passwordConfirmation: z.string(),
+  }).refine((data) => data.password === data.passwordConfirmation, {
+    message: 'Passwords do not match',
+    path: ['passwordConfirmation'],
+  });
+
+  const signUpOutputSchema = z.object({
+    success: z.boolean(),
+    userId: z.string().optional(),
+    error: z.string().optional(),
+  });
+
+  return {
+    signUpInput: signUpInputSchema,
+    signUpOutput: signUpOutputSchema,
+  };
+};
+```
+
+### tRPC Router Implementation
+
+```typescript
+// @booster-auth/trpc/password-auth
+import { router, publicProcedure } from '@trpc/server';
+import { TRPCError } from '@trpc/server';
+import { createPasswordAuthSchemas } from '@booster-auth/password-auth/schemas';
+import { defaultPasswordSchema, PasswordSchema } from '@booster-auth/password-policy';
+
+export const createPasswordAuthRouter = (passwordSchema: PasswordSchema = defaultPasswordSchema) => {
+  const schemas = createPasswordAuthSchemas(passwordSchema);
+  
+  return router({
+    signUp: publicProcedure
+      .input(schemas.signUpInput)
+      .output(schemas.signUpOutput)
+      .mutation(async ({ input, ctx }) => {
+        const passwordAuthService = ctx.passwordAuthService;
+        
+        const result = await passwordAuthService.signUp(input);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: result.error || 'Sign up failed',
+          });
+        }
+        
+        return result;
+      }),
+  });
+};
+
+// Usage examples
+const customPasswordSchema = z.string()
+  .min(10)
+  .refine((password) => !password.includes('password'), {
+    message: 'Password cannot contain the word "password"',
+  });
+
+export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordSchema);
 ```
 
 ### Architectural Considerations
