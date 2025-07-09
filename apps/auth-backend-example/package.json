@@ -1,0 +1,71 @@
+{
+  "name": "@booster-auth/auth-backend-example",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "platform": "node",
+          "outputPath": "apps/auth-backend-example/dist",
+          "format": [
+            "cjs"
+          ],
+          "bundle": false,
+          "main": "apps/auth-backend-example/src/main.ts",
+          "tsConfig": "apps/auth-backend-example/tsconfig.app.json",
+          "assets": [
+            "apps/auth-backend-example/src/assets"
+          ],
+          "esbuildOptions": {
+            "sourcemap": true,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        },
+        "configurations": {
+          "development": {},
+          "production": {
+            "esbuildOptions": {
+              "sourcemap": false,
+              "outExtension": {
+                ".js": ".js"
+              }
+            }
+          }
+        }
+      },
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@booster-auth/auth-backend-example:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@booster-auth/auth-backend-example:build:development"
+          },
+          "production": {
+            "buildTarget": "@booster-auth/auth-backend-example:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@booster-auth/auth-backend-example-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@booster-auth/auth-backend-example"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "apps/auth-backend-example-e2e/jest.config.ts",
+          "passWithNoTests": true
+        },
+        "dependsOn": [
+          "@booster-auth/auth-backend-example:build",
+          "@booster-auth/auth-backend-example:serve"
+        ]
+      }
+    }
+  }
+}
