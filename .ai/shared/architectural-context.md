@@ -30,6 +30,15 @@ This repository treats AI prompts and context as code. The AI agents are expecte
 - OAuth and SSO providers may be added via pluggable strategies.
 - Consider alternative authentication methods such as JWT, magic links, and passkeys.
 
+## Naming Conventions
+
+- Classes and interfaces are named using PascalCase.
+- Functions and variables are named using camelCase.
+- Avoid ending names with "Service" or "Manager" unless they are truly service-like. Generally, ending a class with an -er or -or suffix is a code smell. Classes should be intuitive nouns.
+- **No Java Conventions**: Avoid "I" prefix for interfaces - types should be intuitively expressive
+- **TypeScript Native**: Use TypeScript conventions and patterns
+
+
 ## 🧪 Testing Philosophy
 
 - TDD-first: tests must be generated before implementations.
@@ -65,3 +74,30 @@ With the exception of typescript, all tooling suggested below is the **default**
 ## 🔌 DI & Extensibility
 
 - Core services (`SessionService`, `IdentityService`) receive dependencies via constructor injection.
+
+## 📦 Library Initialization
+
+Following **convention over configuration** principles, the library should:
+
+- **Zero-config defaults**: Work out-of-the-box with sensible defaults for common use cases
+- **Minimal setup**: Single function call to initialize with automatic dependency resolution
+- **Graceful overrides**: Allow configuration only when defaults don't suffice
+- **Type safety**: Provide full TypeScript inference for configuration options
+- **Error guidance**: Clear error messages when configuration is required or invalid
+
+Example initialization patterns:
+```typescript
+// Zero config - uses all defaults
+const auth = boosterAuth();
+
+// Minimal config - only specify what differs from defaults
+const auth = boosterAuth({
+  database: process.env.DATABASE_URL
+});
+
+// Advanced config - full control when needed
+const auth = createAuth({
+  session: { store: new RedisSessionStore() },
+  password: { hashing: new ArgonHashing() }
+});
+```

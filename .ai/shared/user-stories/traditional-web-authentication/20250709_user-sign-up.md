@@ -7,8 +7,8 @@
 
 ## User Story
 
-**As a** developer building a SaaS application  
-**I want** to integrate secure password-based user registration in under 5 minutes  
+**As a** developer building a SaaS application
+**I want** to integrate secure password-based user registration in under 5 minutes
 **So that** I can ship authentication to production quickly while maintaining enterprise-grade security and compliance readiness
 
 ## Acceptance Criteria
@@ -48,8 +48,8 @@ libs/
 ├── core/                          # Core interfaces for identity validation
 │   └── src/
 │       ├── interfaces/
-│       │   ├── IdentityValidator.ts
-│       │   └── UserValidator.ts
+│       │   ├── IdentityValidation.ts
+│       │   └── UserValidation.ts
 │       └── types/
 │           ├── Identity.ts
 │           ├── User.ts
@@ -61,12 +61,12 @@ libs/
 │       ├── interfaces/
 │       │   └── PasswordIdentityRepository.ts
 │       ├── services/
-│       │   └── PasswordAuthService.ts
+│       │   └── PasswordAuthenticationService.ts
 │       ├── schemas/
-│       │   └── passwordAuthSchemas.ts
+│       │   └── passwordAuthenticationSchemas.ts
 │       └── __tests__/
 │           ├── PasswordIdentity.test.ts
-│           └── PasswordAuthService.test.ts
+│           └── PasswordAuthenticationService.test.ts
 ├── password-policy/               # Password policy validation
 │   └── src/
 │       ├── schemas/
@@ -78,9 +78,9 @@ libs/
 ├── trpc/                          # tRPC route implementations
 │   └── password-auth/             # tRPC routes for password auth
 │       └── src/
-│           ├── passwordAuthRouter.ts
+│           ├── passwordAuthenticationRouter.ts
 │           └── __tests__/
-│               └── passwordAuthRouter.test.ts
+│               └── passwordAuthenticationRouter.test.ts
 └── prisma/                        # Prisma implementations
     └── password-auth/             # Prisma implementation for password auth
         └── src/
@@ -98,16 +98,16 @@ export interface PasswordIdentityService {
   signUp(request: PasswordSignUpRequest): Promise<PasswordSignUpResult>;
 }
 
-export interface PasswordHasher {
+export interface PasswordHashing {
   hash(password: string): Promise<string>;
   verify(password: string, hash: string): Promise<boolean>;
 }
 
-export interface EmailValidator {
+export interface EmailValidation {
   validate(email: string): Promise<ValidationResult>; // Encapsulates format + uniqueness
 }
 
-export interface PasswordValidator {
+export interface PasswordValidation {
   validate(password: string, passwordConfirmation: string): ValidationResult; // Encapsulates policy + confirmation
 }
 
@@ -222,23 +222,23 @@ import { defaultPasswordSchema, PasswordSchema } from '@booster-auth/password-po
 
 export const createPasswordAuthRouter = (passwordSchema: PasswordSchema = defaultPasswordSchema) => {
   const schemas = createPasswordAuthSchemas(passwordSchema);
-  
+
   return router({
     signUp: publicProcedure
       .input(schemas.signUpInput)
       .output(schemas.signUpOutput)
       .mutation(async ({ input, ctx }) => {
         const passwordAuthService = ctx.passwordAuthService;
-        
+
         const result = await passwordAuthService.signUp(input);
-        
+
         if (!result.success) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: result.error || 'Sign up failed',
           });
         }
-        
+
         return result;
       }),
   });
@@ -314,7 +314,7 @@ export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordS
 
 ### **Current Scope**
 - This story focuses on core sign-up functionality with tRPC integration
-- Email verification will be addressed in separate story  
+- Email verification will be addressed in separate story
 - Session creation after sign-up is handled by sign-in flow
 - Password reset functionality is separate epic requirement
 - **Rate limiting** is handled in separate user story (20250709_rate-limiting.md)
