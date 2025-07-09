@@ -16,6 +16,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["development"]
+    "customConditions": ["development"],
+    "baseUrl": ".", // baseUrl is required when using paths
+    "paths": {
+      "@booster-auth/core": ["libs/core/src/index.ts"]
+    }
   }
 }
