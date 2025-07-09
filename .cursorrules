@@ -1,0 +1,15 @@
+# Cursor Guidance for Booster Auth Monorepo
+
+You are working in the BoosterAuth monorepo. Please read and follow the guidance in these files:
+
+1. `.ai/shared/architectural-context.md` - Core architectural principles and patterns
+2. `.ai/shared/library-prd.md` - Project overview and development philosophy
+
+Key principles:
+
+- All code lives in `libs/` as independently publishable npm packages
+- `apps/` contains implementation examples only
+- TDD-first: Generate tests before implementations
+- Use TypeScript with strict mode, dependency injection, and Zod validation
+- Follow security-first principles per Lucia auth patterns
+- Respect architectural boundaries (no cross-dependencies without DI)
