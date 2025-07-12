@@ -38,7 +38,6 @@ This repository treats AI prompts and context as code. The AI agents are expecte
 - **No Java Conventions**: Avoid "I" prefix for interfaces - types should be intuitively expressive
 - **TypeScript Native**: Use TypeScript conventions and patterns
 
-
 ## 🧪 Testing Philosophy
 
 - TDD-first: tests must be generated before implementations.
@@ -86,6 +85,7 @@ Following **convention over configuration** principles, the library should:
 - **Error guidance**: Clear error messages when configuration is required or invalid
 
 Example initialization patterns:
+
 ```typescript
 // Zero config - uses all defaults
 const auth = boosterAuth();
@@ -96,7 +96,7 @@ const auth = boosterAuth({
 });
 
 // Advanced config - full control when needed
-const auth = createAuth({
+const auth = boosterAuth({
   session: { store: new RedisSessionStore() },
   password: { hashing: new ArgonHashing() }
 });
