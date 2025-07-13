@@ -70,6 +70,67 @@ Different email providers should be considered. Basic SMTP support is required, 
 
 Upon resetting their password, the user should receive a confirmation email indicating that their password has been successfully changed. This email should not contain the new password but simply confirm the change and offer an opportunity to take action if the user did not initiate the change.
 
+### Magic Links
+
+Users can sign in using magic links sent to their email address. When a user requests a magic link, the system generates a secure, time-limited token and sends it via email. Clicking the link authenticates the user without requiring a password.
+
+Magic links should:
+
+- Expire after a configurable time period (default 15 minutes)
+- Be single-use only (invalidated after successful authentication)
+- Include CSRF protection to prevent misuse
+- Optionally support custom redirect URLs after successful authentication
+
+The system should rate-limit magic link requests to prevent abuse and protect against email flooding attacks.
+
+### OAuth / OIDC Providers
+
+Users can authenticate using external OAuth 2.0 and OpenID Connect (OIDC) providers such as Google, GitHub, Microsoft, and custom enterprise providers. The system should support the standard OAuth 2.0 authorization code flow with PKCE for enhanced security.
+
+OAuth/OIDC integration should include:
+
+- Support for multiple concurrent providers (users can link multiple accounts)
+- Automatic user profile synchronization from provider claims
+- Configurable scopes and permissions per provider
+- Secure state parameter validation to prevent CSRF attacks
+- Support for custom provider configurations (client ID, secret, endpoints)
+- Proper token refresh handling for long-lived sessions
+- Account linking capabilities (associate OAuth accounts with existing email/password accounts)
+
+The system should handle edge cases such as:
+
+- Provider account email changes
+- Revoked provider access
+- Provider service outages (graceful fallback to other authentication methods)
+- Duplicate accounts across providers with the same email address
+
+### Organization Support (Multitenancy)
+
+The system supports organizations as a configurable multitenancy feature (enabled by default). Organizations allow grouping users and isolating data, permissions, and authentication settings per tenant.
+
+When organization support is enabled:
+
+- Users belong to one or more organizations
+- Authentication can be scoped to specific organizations
+- Each organization can have independent configuration (password policies, OAuth providers, branding)
+- Users can switch between organizations they belong to within the same session
+- Organization-specific user directories and permissions
+- Support for organization invitations and user provisioning
+- Organization admins can manage users, settings, and authentication methods
+
+Organization features include:
+
+- Configurable organization creation (self-service vs admin-only)
+- Organization-specific rate limiting and security policies
+
+When organization support is disabled:
+
+- All users exist in a single global tenant
+- Authentication settings apply globally
+- Simplified data model without organization isolation
+
+The organization feature can be toggled via configuration, allowing developers to choose between single-tenant and multi-tenant architectures based on their needs.
+
 ### Sign Out
 
 An authenticated user can sign out by terminating their session. The system should invalidate the user's session token, preventing further access to protected resources until the user signs in again. Systemically, the user should be forgotten until they sign in again, at which point a new session is created.
