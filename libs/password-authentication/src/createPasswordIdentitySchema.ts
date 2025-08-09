@@ -1,29 +1,36 @@
-import { z } from 'zod';
+import { z } from 'zod'
+import { defaultPhoneNumberRegex } from './defaultPhoneNumberRegex.js'
+import { createPasswordPolicySchema } from './password-policy/createPasswordPolicySchema.js'
+import { defaultPasswordPolicyConfiguration } from './password-policy/defaultPasswordPolicyConfiguration.js'
 
-export type IdentifierType = 'email' | 'username' | 'phone';
-export type IdentifierArray = readonly IdentifierType[];
+export type IdentifierType = 'email' | 'username' | 'phone'
+export type IdentifierArray = readonly IdentifierType[]
 
-// Schema builder with compile-time knowledge
-export const createPasswordIdentitySchema = <T extends IdentifierArray>(
+export function createPasswordIdentitySchema<T extends IdentifierArray>(
   identifiers: T,
   schema?: {
-    email?: z.ZodString;
-    username?: z.ZodString;
-    phone?: z.ZodString;
+    email?: z.ZodString
+    username?: z.ZodString
+    phone?: z.ZodString
+    password?: z.ZodString
   }
-) => {
-  const base = z.object({
-    password: z.string(),
-    passwordConfirmation: z.string(),
-  });
+) {
+  const passwordSchema = schema?.password || createPasswordPolicySchema(defaultPasswordPolicyConfiguration)
 
-  const hasEmail = identifiers.includes('email');
-  const hasUsername = identifiers.includes('username');
-  const hasPhone = identifiers.includes('phone');
+  const base = z.object({
+    password: passwordSchema,
+    passwordConfirmation: z.string(),
+  })
+
+  const hasEmail = identifiers.includes('email')
+  const hasUsername = identifiers.includes('username')
+  const hasPhone = identifiers.includes('phone')
 
   return base.extend({
-    ...(hasEmail && { email: schema?.email || z.string().email() }),
+    ...(hasEmail && { email: schema?.email || z.email() }),
     ...(hasUsername && { username: schema?.username || z.string() }),
-    ...(hasPhone && { phone: schema?.phone || z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone number' }) }),
-  });
-};
+    ...(hasPhone && {
+      phone: schema?.phone || z.string().regex(defaultPhoneNumberRegex, { message: 'Invalid phone number' }),
+    }),
+  })
+}
