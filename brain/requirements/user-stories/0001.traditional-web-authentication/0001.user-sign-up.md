@@ -181,34 +181,49 @@ export const simplePasswordSchema: PasswordSchema = z.string()
   .min(6, 'Password must be at least 6 characters');
 ```
 
-### Shared Authentication Schemas
+### Password Identity Schema Factory
 
 ```typescript
-// @booster-auth/password-auth/schemas
+// @booster-auth/password-authentication
 import { z } from 'zod';
-import { defaultPasswordSchema, PasswordSchema } from '@booster-auth/password-policy';
 
-export const createPasswordAuthSchemas = (passwordSchema: PasswordSchema = defaultPasswordSchema) => {
-  const signUpInputSchema = z.object({
-    email: z.string().email('Invalid email format'),
-    password: passwordSchema,
+export type IdentifierType = 'email' | 'username' | 'phone';
+export type IdentifierArray = readonly IdentifierType[];
+
+// Schema builder with compile-time knowledge
+export const createPasswordIdentitySchema = <T extends IdentifierArray>(
+  identifiers: T,
+  schema?: {
+    email?: z.ZodString;
+    username?: z.ZodString;
+    phone?: z.ZodString;
+  }
+) => {
+  const base = z.object({
+    password: z.string(),
     passwordConfirmation: z.string(),
-  }).refine((data) => data.password === data.passwordConfirmation, {
-    message: 'Passwords do not match',
-    path: ['passwordConfirmation'],
   });
 
-  const signUpOutputSchema = z.object({
-    success: z.boolean(),
-    userId: z.string().optional(),
-    error: z.string().optional(),
-  });
+  const hasEmail = identifiers.includes('email');
+  const hasUsername = identifiers.includes('username');
+  const hasPhone = identifiers.includes('phone');
 
-  return {
-    signUpInput: signUpInputSchema,
-    signUpOutput: signUpOutputSchema,
-  };
+  return base.extend({
+    ...(hasEmail && { email: schema?.email || z.string().email() }),
+    ...(hasUsername && { username: schema?.username || z.string() }),
+    ...(hasPhone && { phone: schema?.phone || z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone number' }) }),
+  });
 };
+
+// Usage examples:
+const emailOnlySchema = createPasswordIdentitySchema(['email'] as const);
+const phoneOnlySchema = createPasswordIdentitySchema(['phone'] as const);
+const emailUsernameSchema = createPasswordIdentitySchema(['email', 'username'] as const, {
+  username: z.string().min(3).max(20)
+});
+const allIdentifiersSchema = createPasswordIdentitySchema(['email', 'username', 'phone'] as const, {
+  phone: z.string().regex(/^\+1[0-9]{10}$/, { message: 'Must be US phone number with +1' })
+});
 ```
 
 ### tRPC Router Implementation
@@ -217,19 +232,31 @@ export const createPasswordAuthSchemas = (passwordSchema: PasswordSchema = defau
 // @booster-auth/trpc/password-auth
 import { router, publicProcedure } from '@trpc/server';
 import { TRPCError } from '@trpc/server';
-import { createPasswordAuthSchemas } from '@booster-auth/password-auth/schemas';
-import { defaultPasswordSchema, PasswordSchema } from '@booster-auth/password-policy';
+import { createPasswordIdentitySchema } from '@booster-auth/password-authentication';
+import { z } from 'zod';
 
-export const createPasswordAuthRouter = (passwordSchema: PasswordSchema = defaultPasswordSchema) => {
-  const schemas = createPasswordAuthSchemas(passwordSchema);
+export const createPasswordAuthRouter = (
+  identifiers: readonly ('email' | 'username' | 'phone')[],
+  customSchemas?: {
+    email?: z.ZodString;
+    username?: z.ZodString;
+    phone?: z.ZodString;
+    password?: z.ZodString;
+  }
+) => {
+  const identitySchema = createPasswordIdentitySchema(identifiers, {
+    email: customSchemas?.email,
+    username: customSchemas?.username,
+    phone: customSchemas?.phone,
+  }).extend({
+    password: customSchemas?.password || z.string().min(8),
+  });
 
   return router({
     signUp: publicProcedure
-      .input(schemas.signUpInput)
-      .output(schemas.signUpOutput)
+      .input(identitySchema)
       .mutation(async ({ input, ctx }) => {
         const passwordAuthService = ctx.passwordAuthService;
-
         const result = await passwordAuthService.signUp(input);
 
         if (!result.success) {
@@ -245,13 +272,17 @@ export const createPasswordAuthRouter = (passwordSchema: PasswordSchema = defaul
 };
 
 // Usage examples
-const customPasswordSchema = z.string()
-  .min(10)
-  .refine((password) => !password.includes('password'), {
-    message: 'Password cannot contain the word "password"',
-  });
-
-export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordSchema);
+export const emailOnlyRouter = createPasswordAuthRouter(['email'] as const);
+export const phoneOnlyRouter = createPasswordAuthRouter(['phone'] as const);
+export const emailUsernameRouter = createPasswordAuthRouter(['email', 'username'] as const, {
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
+  password: z.string().min(12)
+});
+export const allIdentifiersRouter = createPasswordAuthRouter(['email', 'username', 'phone'] as const, {
+  phone: z.string().regex(/^\+1[0-9]{10}$/, { message: 'Must be US phone number' }),
+  username: z.string().min(3).max(20),
+  password: z.string().min(12)
+});
 ```
 
 ### Architectural Considerations
@@ -313,6 +344,7 @@ export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordS
 ## Notes
 
 ### **Current Scope**
+
 - This story focuses on core sign-up functionality with tRPC integration
 - Email verification will be addressed in separate story
 - Session creation after sign-up is handled by sign-in flow
@@ -320,11 +352,13 @@ export const customPasswordAuthRouter = createPasswordAuthRouter(customPasswordS
 - **Rate limiting** is handled in separate user story (20250709_rate-limiting.md)
 
 ### **Business Impact**
+
 - **Developer Productivity**: 5-minute integration saves 2-3 days of auth implementation
 - **Security Posture**: Enterprise-grade security reduces compliance risk
 - **Time-to-Market**: Faster auth implementation accelerates product launches
 
 ### **Technical Decisions**
+
 - tRPC router is designed to be mountable to existing applications
 - Future support for REST and GraphQL will follow similar patterns
 - Business logic remains transport-agnostic for maximum flexibility
